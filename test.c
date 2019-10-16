@@ -19,10 +19,8 @@ int main () {
     while (fgets(pwd, sizeof(pwd), fp1) != NULL) 
         {
             printf("%s", pwd);
-
         }
     pclose(fp1);
-
   
 
     fp = fopen("Profile", "r");
@@ -37,7 +35,7 @@ int main () {
                 pathflag = true;
             }
 
-        if (ptr4 != NULL) /* Substring found */
+        if (ptr4 != NULL) /* Finding  */
             {
                 homeflag = true;
                 strcpy(dest, line+5);
@@ -53,9 +51,5 @@ int main () {
    chdir(dest); 
    printf("%s\n", getcwd(s, 100)); 
 
-   //char command[50];
-   //char pwd[50];
-   //strcpy(command, "pwd" );
-   //printf(popen(command, "r"));
    return(0);
 } 
