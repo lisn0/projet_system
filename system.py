@@ -34,7 +34,6 @@ if __name__ == '__main__':
 
     def do_cd():
         global args
-        #print("Changing directory... '{}'".format(args))
         os.chdir(args[0])
 
     list_commands = {"lest": do_ls, "cd": do_cd, "help": do_help, "?": do_help, "pwd": do_pwd}
@@ -46,8 +45,15 @@ if __name__ == '__main__':
         list_ = inp.split(" ")
         command = list_[0]
         args = list_[1:]
-        if command in list_commands:
+        if ">" in list_ and command == "pwd":
+            pwd = os.popen('pwd').read()
+            file1 = list_[-1]
+            f = open(file1, "w+")
+            f.write(pwd)
+            f.close()
+        
+        elif command in list_commands:
             list_commands[command]()
         else:
-            print("unkonwn command..")
+            os.system(inp)
             
