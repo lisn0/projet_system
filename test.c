@@ -9,7 +9,7 @@ int main () {
     char pwd[40];
     char * line = NULL;
     size_t len = 0;
-        char s[100]; 
+    char s[100]; 
 
     char dest[50];
     ssize_t read;
@@ -49,7 +49,7 @@ int main () {
     fclose(fp);
       
    chdir(dest); 
-   printf("%s\n", getcwd(s, 100)); 
+   printf("%s\n", getcwd(s, 100));
 
    return(0);
 } 
