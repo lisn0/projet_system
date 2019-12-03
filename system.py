@@ -3,17 +3,17 @@ import string
 import sys
 import subprocess
 import re
-
+import ordononceur
 
 global args 
 args = ""
 list_commands_alias = {}
 
 if __name__ == '__main__':
-    list_commands_tmp = {}
     print("Reading profile...")
     f = open('profile', "r")
     lines = f.readlines()
+    print("Verifying file syntax...")
     if lines[0][:4] != "PATH":
         raise ValueError('PATH does not exist in profile!!.')
     if lines[1][:4] != "HOME":
@@ -24,14 +24,18 @@ if __name__ == '__main__':
     ruler = '='
     home = home.strip()
     pwd = os.popen('pwd').read()
-    #print("Getting current directory...")
-    #print(pwd)
-    #print("Changing directory to HOME...")
+    print("Getting current directory...")
+    print(pwd)
+    print("Changing directory to ", home)
     os.chdir(home)
+    
+    path_tmp=(pwd.split()[0]+"/bin:"+path)
+    path=path_tmp
     
     def do_help():
         for key, val in list_commands.items():
-            print(key, "\t\t",list_commands[key][1])
+            print(key+"\t\t", "\t\t",list_commands[key][1])
+            
     def do_aliases():
         for key, val in list_commands_alias.items():
             print(key, "\t\t",list_commands_alias[key][1])
@@ -48,7 +52,7 @@ if __name__ == '__main__':
         tmp = f.read()
         f.close()
         tmp2 = re.split('; |\n',tmp)
-        run(tmp2)
+        run2(tmp2)
 
     def do_ls():
         c = os.popen("lest").read()
@@ -64,60 +68,70 @@ if __name__ == '__main__':
     def do_cd():
         global args
         os.chdir(args[0])
+        
     def do_pass():
         pass
     
-    def run(tm):
+    def run2(tm):
         for t in tm:
           pwd = os.popen('pwd').read().split("\n")[0]
           inp = t
           list_ = inp.split(" ")
           command = list_[0]
           args = list_[1:]
+          
           if command in list_commands:
               list_commands[command][0]()
           else:
               os.system(inp)
+    
+    def run():
+        while 1:
+            pwd = os.popen('pwd').read().split("\n")[0]
+            inp = input(str(pwd)+ "> ")
+            list_ = inp.split(" ")
+            command = list_[0]
+            args = list_[1:]
+            
+            if ">" in list_:
+                p =  [i for i,x in enumerate(args) if x == ">"][0]
+                tmp = os.popen(command +" "+ " ".join(args[:p])).read()
+                file1 = list_[-1]
+                f = open(file1, "w+")
+                f.write(tmp)
+                f.close()
+
+            elif "<" in list_:
+                file1 = list_[-1]
+                f = open(file1, "r")
+                tmp = f.read()
+                f.close()
+                tmp = os.system( "echo '" +tmp + "' | " + command+" "+ args[0])
+
+            elif command in list_commands_alias.keys():
+                run2([list_commands_alias[command][0]])
+                
+            elif command in list_commands:
+                list_commands[command][0]()
+            else:
+                os.system(inp)
 
 
-    list_commands = { "execfile":   [   do_execfile,   "execute file"],
-                     "aliases":     [   do_aliases,    "show aliases"],
-                     "lest":        [   do_ls,         "list directory contents"],
-                     "cd":          [   do_cd,         "change the working directory"],
-                     "help":        [   do_help,       "print this menu"],
-                     "alias":       [   do_alias,      "define or display aliases"],
-                     "?":           [   do_help,       "print this menu"],
-                     "printwd":     [   do_pwd,        "print name of current/working directory"],
-                     "cat2":        [   do_cat2,       "concatenate files and print on the standard output"],
-                     "pass":        [   do_pass,       "pass"]}
+    list_commands = {"execfile":    [   do_execfile,   "execute file"                                       ],
+                     "aliases":     [   do_aliases,    "show aliases"                                       ],
+                     "lest":        [   do_ls,         "list directory contents"                            ],
+                     "cd":          [   do_cd,         "change the working directory"                       ],
+                     "help":        [   do_help,       "print this menu"                                    ],
+                     "alias":       [   do_alias,      "define or display aliases"                          ],
+                     "?":           [   do_help,       "print this menu"                                    ],
+                     "printwd":     [   do_pwd,        "print name of current/working directory"            ],
+                     "cat2":        [   do_cat2,       "concatenate files and print on the standard output" ]}
     
     print("Greetings! Type ? or help to list commands")
     
-    while 1:
-        pwd = os.popen('pwd').read().split("\n")[0]
-        inp = input(str(pwd)+ "> ")
-        list_ = inp.split(" ")
-        command = list_[0]
-        args = list_[1:]
-        if ">" in list_:
-          p =  [i for i,x in enumerate(args) if x == ">"][0]
-          tmp = os.popen(command +" "+ " ".join(args[:p])).read()
-          file1 = list_[-1]
-          f = open(file1, "w+")
-          f.write(tmp)
-          f.close()
-
-        elif "<" in list_:
-          file1 = list_[-1]
-          f = open(file1, "r")
-          tmp = f.read()
-          f.close()
-          tmp = os.system( "echo '" +tmp + "' | " + command+" "+ args[0])
-
-        elif command in list_commands_alias.keys():
-            run([list_commands_alias[command][0]])
-        elif command in list_commands:
-            list_commands[command][0]()
-        else:
-            os.system(inp)
-
+    print("Chose \n1:\tExecute commands\n2:\tExecute Algorithm SJF")
+    inpu = input("> ")
+    if inpu == "1":
+        run2()
+    elif inpu =="2":
+        ordononceur.main2()
