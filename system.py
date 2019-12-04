@@ -4,6 +4,8 @@ import sys
 import subprocess
 import re
 import ordononceur
+import pprint
+import time
 
 global args 
 args = ""
@@ -24,8 +26,10 @@ if __name__ == '__main__':
     ruler = '='
     home = home.strip()
     pwd = os.popen('pwd').read()
+    #subprocess.Popen(["export","PATH=$PATH:"+pwd+"bin"])
+
     print("Getting current directory...")
-    print(pwd)
+    #print(pwd)
     print("Changing directory to ", home)
     os.chdir(home)
     
@@ -55,23 +59,37 @@ if __name__ == '__main__':
         run2(tmp2)
 
     def do_ls():
-        c = os.popen("lest").read()
+        c = os.popen("/run/media/berika/TWICE/berika/github/bin/lest").read()
         print(c)
         
     def do_cat2():
-        c = os.popen("cat2 " + " ".join(args[:])).read()
+        c = os.popen("/run/media/berika/TWICE/berika/github/bin/cat2 " + " ".join(args[:])).read()
         print(c)
         
     def do_pwd():
-        os.system("printwd")
-
+        pwdtmp= os.popen("/run/media/berika/TWICE/berika/github/bin/printwd").read()
+        print(pwdtmp)
+        
     def do_cd():
         global args
         os.chdir(args[0])
-        
-    def do_pass():
-        pass
-    
+            
+    def start():
+        while 1:
+            os.system("clear")
+
+            pp = pprint.PrettyPrinter(indent=4)
+            pp.pprint("************MAIN MENU**************")
+            inpu = input("""
+                1:\tExecute commands
+                2:\tExecute Algorithm
+                >>""")
+            if inpu == "1":
+                pp.pprint("Type ? or help to list commands")
+                run()
+            elif inpu =="2":
+                ordononceur.main2()
+
     def run2(tm):
         for t in tm:
           pwd = os.popen('pwd').read().split("\n")[0]
@@ -86,6 +104,7 @@ if __name__ == '__main__':
               os.system(inp)
     
     def run():
+        global args
         while 1:
             pwd = os.popen('pwd').read().split("\n")[0]
             inp = input(str(pwd)+ "> ")
@@ -112,6 +131,7 @@ if __name__ == '__main__':
                 run2([list_commands_alias[command][0]])
                 
             elif command in list_commands:
+
                 list_commands[command][0]()
             else:
                 os.system(inp)
@@ -119,6 +139,7 @@ if __name__ == '__main__':
 
     list_commands = {"execfile":    [   do_execfile,   "execute file"                                       ],
                      "aliases":     [   do_aliases,    "show aliases"                                       ],
+                     "exit":        [   start,     "return to main menu"                                ],
                      "lest":        [   do_ls,         "list directory contents"                            ],
                      "cd":          [   do_cd,         "change the working directory"                       ],
                      "help":        [   do_help,       "print this menu"                                    ],
@@ -126,12 +147,6 @@ if __name__ == '__main__':
                      "?":           [   do_help,       "print this menu"                                    ],
                      "printwd":     [   do_pwd,        "print name of current/working directory"            ],
                      "cat2":        [   do_cat2,       "concatenate files and print on the standard output" ]}
-    
-    print("Greetings! Type ? or help to list commands")
-    
-    print("Chose \n1:\tExecute commands\n2:\tExecute Algorithm SJF")
-    inpu = input("> ")
-    if inpu == "1":
-        run2()
-    elif inpu =="2":
-        ordononceur.main2()
+    time.sleep(1)
+
+    start()
