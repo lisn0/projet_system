@@ -1,13 +1,13 @@
 import os
 import string
 import sys
-import subprocess
+from subprocess import Popen, PIPE, STDOUT
 import re
 import ordononceur
 import pprint
 import time
 
-global args 
+global args
 args = ""
 list_commands_alias = {}
 
@@ -25,56 +25,62 @@ if __name__ == '__main__':
     f.close()
     ruler = '='
     home = home.strip()
-    pwd = os.popen('pwd').read()
-    #subprocess.Popen(["export","PATH=$PATH:"+pwd+"bin"])
-
+    pwd1 = Popen(['bin/printwd'], stdout=PIPE, stdin=PIPE, stderr=PIPE, encoding="utf-8").communicate()[0]
     print("Getting current directory...")
-    #print(pwd)
+    # print(pwd)
     print("Changing directory to ", home)
     os.chdir(home)
-    
-    path_tmp=(pwd.split()[0]+"/bin:"+path)
-    path=path_tmp
-    
-    def do_help():
-        for key, val in list_commands.items():
-            print(key+"\t\t", "\t\t",list_commands[key][1])
-            
-    def do_aliases():
-        for key, val in list_commands_alias.items():
-            print(key, "\t\t",list_commands_alias[key][1])
+    pwd1 = pwd1.strip()
+    path_tmp = (pwd1.split()[0] + "/bin:" + path)
+    path = path_tmp
 
-    def do_alias():
+
+    def do_help(ret=None):
+        for key, val in list_commands.items():
+            print(key + "\t\t", "\t\t", list_commands[key][1])
+        return list_commands
+
+    def do_aliases(ret=None):
+        for key, val in list_commands_alias.items():
+            print(key, "\t\t", list_commands_alias[key][1])
+        return list_commands_alias
+
+    def do_alias(ret=None):
         global args
-        #print(args)
         ali = args[0].split("=")
-        #print(ali[0])
-        list_commands_alias[ali[0]] = [' '.join(args[:]).split("=")[1].split("\"")[1], ' '.join(args[:]).split("=")[1].split("\"")[1]]
-    
-    def do_execfile():
+        list_commands_alias[ali[0]] = [' '.join(args[:]).split("=")[1].split("\"")[1],
+                                       ' '.join(args[:]).split("=")[1].split("\"")[1]]
+
+    def do_execfile(ret=None):
         f = open(args[0], "r")
         tmp = f.read()
         f.close()
-        tmp2 = re.split('; |\n',tmp)
-        run2(tmp2)
+        tmp2 = re.split(';|\n', tmp)
+        for t in tmp2:
+            execute(t)
 
-    def do_ls():
-        c = os.popen("/run/media/berika/TWICE/berika/github/bin/lest").read()
-        print(c)
-        
-    def do_cat2():
-        c = os.popen("/run/media/berika/TWICE/berika/github/bin/cat2 " + " ".join(args[:])).read()
-        print(c)
-        
-    def do_pwd():
-        pwdtmp= os.popen("/run/media/berika/TWICE/berika/github/bin/printwd").read()
-        print(pwdtmp)
-        
-    def do_cd():
+
+    def do_ls(ret=None):
+        return Popen([pwd1+'/bin/lest'], stdout=PIPE, encoding="utf-8").communicate(input=str.encode(ret) if ret else None)[0]
+
+
+    def do_cat2(ret=None):
+        if args:
+            return Popen([pwd1+'/bin/cat2'] + args , stdout=PIPE, encoding="utf-8").communicate(input=rstr.encode(ret) if ret else None)[0]
+        else:
+            return Popen([pwd1+'/bin/cat2'], stdout=PIPE, encoding="utf-8").communicate(input=str.encode(ret) if ret else None)[0]
+
+    def do_pwd(ret=None):
+        pwdtmp = Popen([pwd1+'/bin/printwd'], stdout=PIPE, encoding="utf-8").communicate(input=str.encode(ret) if ret else None)[0]
+        return pwdtmp
+
+
+    def do_cd(ret=None):
         global args
         os.chdir(args[0])
-            
-    def start():
+
+
+    def start(ret=None):
         while 1:
             os.system("clear")
 
@@ -87,66 +93,68 @@ if __name__ == '__main__':
             if inpu == "1":
                 pp.pprint("Type ? or help to list commands")
                 run()
-            elif inpu =="2":
+            elif inpu == "2":
                 ordononceur.main2()
 
-    def run2(tm):
-        for t in tm:
-          pwd = os.popen('pwd').read().split("\n")[0]
-          inp = t
-          list_ = inp.split(" ")
-          command = list_[0]
-          args = list_[1:]
-          
-          if command in list_commands:
-              list_commands[command][0]()
-          else:
-              os.system(inp)
-    
+
+    def shell(inp2, ret=None):
+        list_ = inp2.strip().split(" ")
+        command = list_[0]
+        global args
+        args = list_[1:]
+        if ">" in list_:
+            p = [i for i, x in enumerate(args) if x == ">"][0]
+            file1 = list_[-1]
+            f = open(file1, "w+")
+            f.write(shell(' '.join(list_[:p+1])))
+            f.close()
+
+        elif "<" in list_:
+            file1 = list_[-1]
+            with open(file1, "r") as f:
+                out = shell(' '.join(list_[:-2]))
+                print(out)
+
+        elif command in list_commands_alias.keys():
+            return shell(list_commands_alias[command][0])
+
+        elif command in list_commands:
+            return list_commands[command][0](ret)
+        else:
+            print("Command not found")
+
+
+    def execute(inp):
+        if "|" in inp:
+            ouput=None
+            splited = inp.split("|")
+            for s in splited:
+                s.strip()
+                ouput=shell(s, ouput)
+            if ouput:
+                print(ouput)
+        sh = shell(inp)
+        if sh and type(sh) != dict:
+            print(sh)
+
     def run():
         global args
         while 1:
             pwd = os.popen('pwd').read().split("\n")[0]
-            inp = input(str(pwd)+ "> ")
-            list_ = inp.split(" ")
-            command = list_[0]
-            args = list_[1:]
-            
-            if ">" in list_:
-                p =  [i for i,x in enumerate(args) if x == ">"][0]
-                tmp = os.popen(command +" "+ " ".join(args[:p])).read()
-                file1 = list_[-1]
-                f = open(file1, "w+")
-                f.write(tmp)
-                f.close()
-
-            elif "<" in list_:
-                file1 = list_[-1]
-                f = open(file1, "r")
-                tmp = f.read()
-                f.close()
-                tmp = os.system( "echo '" +tmp + "' | " + command+" "+ args[0])
-
-            elif command in list_commands_alias.keys():
-                run2([list_commands_alias[command][0]])
-                
-            elif command in list_commands:
-
-                list_commands[command][0]()
-            else:
-                os.system(inp)
+            inp = input(str(pwd) + "> ").strip()
+            execute(inp)
 
 
-    list_commands = {"execfile":    [   do_execfile,   "execute file"                                       ],
-                     "aliases":     [   do_aliases,    "show aliases"                                       ],
-                     "exit":        [   start,     "return to main menu"                                ],
-                     "lest":        [   do_ls,         "list directory contents"                            ],
-                     "cd":          [   do_cd,         "change the working directory"                       ],
-                     "help":        [   do_help,       "print this menu"                                    ],
-                     "alias":       [   do_alias,      "define or display aliases"                          ],
-                     "?":           [   do_help,       "print this menu"                                    ],
-                     "printwd":     [   do_pwd,        "print name of current/working directory"            ],
-                     "cat2":        [   do_cat2,       "concatenate files and print on the standard output" ]}
-    time.sleep(1)
+    list_commands = {"execfile": [do_execfile, "execute file"],
+                     "aliases": [do_aliases, "show aliases"],
+                     "exit": [start, "return to main menu"],
+                     "lest": [do_ls, "list directory contents"],
+                     "cd": [do_cd, "change the working directory"],
+                     "help": [do_help, "print this menu"],
+                     "alias": [do_alias, "define or display aliases"],
+                     "?": [do_help, "print this menu"],
+                     "printwd": [do_pwd, "print name of current/working directory"],
+                     "cat2": [do_cat2, "concatenate files and print on the standard output"]}
+    # time.sleep(1)
 
     start()
