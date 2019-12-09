@@ -6,6 +6,7 @@ import re
 import ordononceur
 import pprint
 import time
+import io
 
 global args
 args = ""
@@ -27,10 +28,9 @@ if __name__ == '__main__':
     home = home.strip()
     pwd1 = Popen(['bin/printwd'], stdout=PIPE, stdin=PIPE, stderr=PIPE, encoding="utf-8").communicate()[0]
     print("Getting current directory...")
-    # print(pwd)
     print("Changing directory to ", home)
     os.chdir(home)
-    pwd1 = pwd1.strip()
+    pwd1 = pwd1.strip()+"/bin/"
     path_tmp = (pwd1.split()[0] + "/bin:" + path)
     path = path_tmp
 
@@ -40,16 +40,19 @@ if __name__ == '__main__':
             print(key + "\t\t", "\t\t", list_commands[key][1])
         return list_commands
 
+
     def do_aliases(ret=None):
         for key, val in list_commands_alias.items():
             print(key, "\t\t", list_commands_alias[key][1])
         return list_commands_alias
+
 
     def do_alias(ret=None):
         global args
         ali = args[0].split("=")
         list_commands_alias[ali[0]] = [' '.join(args[:]).split("=")[1].split("\"")[1],
                                        ' '.join(args[:]).split("=")[1].split("\"")[1]]
+
 
     def do_execfile(ret=None):
         f = open(args[0], "r")
@@ -61,18 +64,22 @@ if __name__ == '__main__':
 
 
     def do_ls(ret=None):
-        return Popen([pwd1+'/bin/lest'], stdout=PIPE, encoding="utf-8").communicate(input=str.encode(ret) if ret else None)[0]
+        return \
+            Popen([pwd1 + 'lest'], stdout=PIPE, encoding="utf-8").communicate(
+                input=str.encode(ret) if ret else None)[0]
 
 
     def do_cat2(ret=None):
         if args:
-            return Popen([pwd1+'/bin/cat2'] + args , stdout=PIPE, encoding="utf-8").communicate(input=rstr.encode(ret) if ret else None)[0]
+            return Popen([pwd1 + 'cat2'] + args, stdout=PIPE, encoding="utf-8").communicate(
+                input=str.encode(ret) if ret else None)[0]
         else:
-            return Popen([pwd1+'/bin/cat2'], stdout=PIPE, encoding="utf-8").communicate(input=str.encode(ret) if ret else None)[0]
+            return Popen([pwd1 + 'cat2'], stdout=PIPE, stdin=ret, encoding="utf-8").communicate()[0]
+
 
     def do_pwd(ret=None):
-        pwdtmp = Popen([pwd1+'/bin/printwd'], stdout=PIPE, encoding="utf-8").communicate(input=str.encode(ret) if ret else None)[0]
-        return pwdtmp
+        return Popen([pwd1 + 'printwd'], stdout=PIPE, encoding="utf-8").communicate(
+            input=str.encode(ret) if ret else None)[0]
 
 
     def do_cd(ret=None):
@@ -106,13 +113,13 @@ if __name__ == '__main__':
             p = [i for i, x in enumerate(args) if x == ">"][0]
             file1 = list_[-1]
             f = open(file1, "w+")
-            f.write(shell(' '.join(list_[:p+1])))
+            f.write(shell(' '.join(list_[:p + 1])))
             f.close()
 
         elif "<" in list_:
             file1 = list_[-1]
             with open(file1, "r") as f:
-                out = shell(' '.join(list_[:-2]))
+                out = shell(' '.join(list_[:-2]), f)
                 print(out)
 
         elif command in list_commands_alias.keys():
@@ -126,23 +133,27 @@ if __name__ == '__main__':
 
     def execute(inp):
         if "|" in inp:
-            ouput=None
+            ouput = None
             splited = inp.split("|")
             for s in splited:
                 s.strip()
-                ouput=shell(s, ouput)
+                ouput = shell(s, ouput)
             if ouput:
                 print(ouput)
         sh = shell(inp)
         if sh and type(sh) != dict:
             print(sh)
 
+
     def run():
         global args
         while 1:
             pwd = os.popen('pwd').read().split("\n")[0]
             inp = input(str(pwd) + "> ").strip()
-            execute(inp)
+            try:
+                execute(inp)
+            except:
+                print("Could not execute ", inp)
 
 
     list_commands = {"execfile": [do_execfile, "execute file"],
@@ -155,6 +166,7 @@ if __name__ == '__main__':
                      "?": [do_help, "print this menu"],
                      "printwd": [do_pwd, "print name of current/working directory"],
                      "cat2": [do_cat2, "concatenate files and print on the standard output"]}
-    # time.sleep(1)
-
+    time.sleep(1)
     start()
+
+# TODO add more commands
