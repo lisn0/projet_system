@@ -30,65 +30,18 @@ if __name__ == '__main__':
     print("Getting current directory...")
     print("Changing directory to ", home)
     os.chdir(home)
-    pwd1 = pwd1.strip()+"/bin/"
+    pwd1 = pwd1.strip() + "/bin/"
     path_tmp = (pwd1.split()[0] + "/bin:" + path)
     path = path_tmp
 
 
-    def do_help(ret=None):
-        for key, val in list_commands.items():
-            print(key + "\t\t", "\t\t", list_commands[key][1])
-        return list_commands
-
-
-    def do_aliases(ret=None):
-        for key, val in list_commands_alias.items():
-            print(key, "\t\t", list_commands_alias[key][1])
-        return list_commands_alias
-
-
-    def do_alias(ret=None):
-        global args
-        ali = args[0].split("=")
-        list_commands_alias[ali[0]] = [' '.join(args[:]).split("=")[1].split("\"")[1],
-                                       ' '.join(args[:]).split("=")[1].split("\"")[1]]
-
-
-    def do_execfile(ret=None):
-        f = open(args[0], "r")
-        tmp = f.read()
-        f.close()
-        tmp2 = re.split(';|\n', tmp)
-        for t in tmp2:
-            execute(t)
-
-
-    def do_ls(ret=None):
-        return \
-            Popen([pwd1 + 'lest'], stdout=PIPE, encoding="utf-8").communicate(
-                input=str.encode(ret) if ret else None)[0]
-
-
-    def do_cat2(ret=None):
-        if args:
-            return Popen([pwd1 + 'cat2'] + args, stdout=PIPE, encoding="utf-8").communicate(
-                input=str.encode(ret) if ret else None)[0]
-        else:
-            return Popen([pwd1 + 'cat2'], stdout=PIPE, stdin=ret, encoding="utf-8").communicate()[0]
-
-
-    def do_pwd(ret=None):
-        return Popen([pwd1 + 'printwd'], stdout=PIPE, encoding="utf-8").communicate(
-            input=str.encode(ret) if ret else None)[0]
-
-
-    def do_cd(ret=None):
-        global args
-        os.chdir(args[0])
-
-
     def start(ret=None):
+        """
+        Main menu
+        :param ret: not needed
+        """
         while 1:
+            "Used to clear screen"
             os.system("clear")
 
             pp = pprint.PrettyPrinter(indent=4)
@@ -99,61 +52,183 @@ if __name__ == '__main__':
                 >>""")
             if inpu == "1":
                 pp.pprint("Type ? or help to list commands")
-                run()
+                while 1:
+                    pwd = do_pwd()
+                    inp = input(str(pwd) + "> ").strip()
+                    execute(inp)
+
             elif inpu == "2":
                 ordononceur.main2()
 
 
-    def shell(inp2, ret=None):
-        list_ = inp2.strip().split(" ")
-        command = list_[0]
-        global args
-        args = list_[1:]
-        if ">" in list_:
-            p = [i for i, x in enumerate(args) if x == ">"][0]
-            file1 = list_[-1]
-            f = open(file1, "w+")
-            f.write(shell(' '.join(list_[:p + 1])))
-            f.close()
-
-        elif "<" in list_:
-            file1 = list_[-1]
-            with open(file1, "r") as f:
-                out = shell(' '.join(list_[:-2]), f)
-                print(out)
-
-        elif command in list_commands_alias.keys():
-            return shell(list_commands_alias[command][0])
-
-        elif command in list_commands:
-            return list_commands[command][0](ret)
-        else:
-            print("Command not found")
-
-
     def execute(inp):
-        if "|" in inp:
-            ouput = None
-            splited = inp.split("|")
-            for s in splited:
-                s.strip()
-                ouput = shell(s, ouput)
-            if ouput:
-                print(ouput)
+        """
+        Call shell and print it possible
+        :param inp: User input
+        """
         sh = shell(inp)
         if sh and type(sh) != dict:
             print(sh)
 
 
-    def run():
+    def shell(inp2, ret=None):
+        """
+
+        :param inp2: command
+        :param ret: Used to store redirected output and determine if the is a redirection
+        :return: return output as a string so it can be used in other shell method by the ret argument to handle redirections
+        """
         global args
-        while 1:
-            pwd = os.popen('pwd').read().split("\n")[0]
-            inp = input(str(pwd) + "> ").strip()
+        if "|" in inp2:
+            ouput = None
+            """
+            If pipe found split input into several commands and redirect command output to the input of the other command
+            call shell function again to handle all the commands separately 
+            """
+            for s in inp2.split("|"):
+                s.strip()
+                ouput = shell(s, ouput)
+            if ouput:
+                print(ouput)
+        else:
+            """
+            split command to a list to determinate the arguments
+            """
+            list_ = inp2.strip().split(" ")
+            command = list_[0]
+            args = list_[1:]
+
+            if ">" in list_:
+                """
+                Find '>' position and write to the file
+                """
+                p = [i for i, x in enumerate(args) if x == ">"][0]
+                file1 = list_[-1]
+                with open(file1, "w+") as f:
+                    f.write(shell(' '.join(list_[:p + 1])))
+
+            elif "<" in list_:
+                """
+                Read specified file and call shell function with the file as input (f)
+                """
+                file1 = list_[-1]
+                with open(file1, "r") as f:
+                    out = shell(' '.join(list_[:-2]), f)
+                    print(out)
+
+            elif command in list_commands_alias.keys():
+                """
+                Test to see if the command is an alias and execute it by calling the shell function
+                """
+                return shell(list_commands_alias[command][0])
+
+            elif command in list_commands:
+                """
+                If command found in list_commands  execute the function the we defined with ret as argument if needed 
+                """
+                return list_commands[command][0](ret)
+            else:
+                print("Command not found")
+
+
+    def do_help(ret=None):
+        """
+        print help
+        :param ret: not used
+        :return: return in case of pipe usage
+        """
+        for key, val in list_commands.items():
+            print("{: <20} {: <20}".format(key, list_commands[key][1]))
+        return list_commands
+
+
+    def do_aliases(ret=None):
+        """
+        print saved aliases
+        :param ret: not used
+        :return: return in case of pipe usage
+        """
+        for key, val in list_commands_alias.items():
+            print("{: <20} {: <20}".format(key, list_commands_alias[key][1]))
+        return list_commands_alias
+
+
+    def do_alias(ret=None):
+        """
+        Manipulate alias argument and save it in form of a command  
+        :param ret: not used
+        """
+        global args
+        ali = args[0].split("=")
+        list_commands_alias[ali[0]] = [' '.join(args[:]).split("=")[1].split("\"")[1],
+                                       ' '.join(args[:]).split("=")[1].split("\"")[1]]
+
+
+    def do_execfile(ret=None):
+        """
+        Read command argument as file, split file content when in ; or new line and execute them separately.
+        Pipes and redirections will be handled by the shell function
+        :param ret: not used
+        """
+        with open(args[0], "r") as f:
+            tmp = f.read()
+            tmp2 = re.split(';|\n', tmp)
+            for t in tmp2:
+                if t:
+                    execute(t)
+
+
+    def do_ls(ret=None):
+        """
+        Execute the lest command
+        :param ret: used in case there is a redirected input to the command
+        :return: return in case the output is used in another command (PIPE or redirections)
+        """
+        return \
+            Popen([pwd1 + 'lest'], stdout=PIPE, encoding="utf-8").communicate(
+                input=str.encode(ret) if ret else None)[0]
+
+
+    def do_cat2(ret=None):
+        """
+        Execute the cat2 command
+        :param ret: used in case there is a redirected input to the command
+        :return: return in case the output is used in another command (PIPE or redirections)
+        """
+        if args:
+            """
+            If there is an argument the command will execute with the said argument
+            """
+            return Popen([pwd1 + 'cat2'] + args, stdout=PIPE, encoding="utf-8").communicate(
+                input=str.encode(ret) if ret else None)[0]
+        else:
             try:
-                execute(inp)
+                """
+                Try to use a file as input (ret in stdin) 
+                If failed the input (ret: string) will be handled by the communicate() method
+                """
+                return Popen([pwd1 + 'cat2'], stdout=PIPE, stdin=ret, encoding="utf-8").communicate()[0]
             except:
-                print("Could not execute ", inp)
+                return Popen([pwd1 + 'cat2'], stdout=PIPE, encoding="utf-8").communicate(
+                    input=str.encode(ret) if ret else None)[0]
+
+
+    def do_pwd(ret=None):
+        """
+        :param ret: used in case there is a redirected input to the command
+        :return: return in case the output is used in another command (PIPE or redirections)
+        """
+        return Popen([pwd1 + 'printwd'], stdout=PIPE, encoding="utf-8").communicate(
+            input=str.encode(ret) if ret else None)[0]
+
+
+    def do_cd(ret=None):
+        """
+        Will change directory just like the function in C programming language
+        :param ret: Not used
+        """
+        global args
+        os.chdir(args[0])
 
 
     list_commands = {"execfile": [do_execfile, "execute file"],
@@ -169,4 +244,3 @@ if __name__ == '__main__':
     time.sleep(1)
     start()
 
-# TODO add more commands
