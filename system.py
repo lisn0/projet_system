@@ -1,12 +1,13 @@
-import os
 import string
 import sys
 from subprocess import Popen, PIPE, STDOUT
 import re
 import ordononceur
+from ordononceur import content
 import pprint
 import time
 import io
+from termcolor import colored
 
 global args
 args = ""
@@ -14,25 +15,23 @@ list_commands_alias = {}
 
 if __name__ == '__main__':
     print("Reading profile...")
-    f = open('profile', "r")
-    lines = f.readlines()
-    print("Verifying file syntax...")
-    if lines[0][:4] != "PATH":
-        raise ValueError('PATH does not exist in profile!!.')
-    if lines[1][:4] != "HOME":
-        raise ValueError('HOME does not exist in profile!!.')
-    path = lines[0][5:]
-    home = lines[1][5:]
-    f.close()
+    with open('profile', "r") as f:
+        lines = f.readlines()
+        print("Verifying file syntax...")
+        if lines[0][:4] != "PATH":
+            raise ValueError('PATH does not exist in profile!!.')
+        if lines[1][:4] != "HOME":
+            raise ValueError('HOME does not exist in profile!!.')
+        path = lines[0][5:]
+        home = lines[1][5:]
     ruler = '='
     home = home.strip()
     pwd1 = Popen(['bin/printwd'], stdout=PIPE, stdin=PIPE, stderr=PIPE, encoding="utf-8").communicate()[0]
     print("Getting current directory...")
     print("Changing directory to ", home)
-    os.chdir(home)
+    ordononceur.os.chdir(home)
     pwd1 = pwd1.strip() + "/bin/"
-    path_tmp = (pwd1.split()[0] + "/bin:" + path)
-    path = path_tmp
+    path = (pwd1.split()[0] + "/bin:" + path)
 
 
     def start(ret=None):
@@ -42,23 +41,23 @@ if __name__ == '__main__':
         """
         while 1:
             "Used to clear screen"
-            os.system("clear")
+            ordononceur.os.system("clear")
 
-            pp = pprint.PrettyPrinter(indent=4)
-            pp.pprint("************MAIN MENU**************")
-            inpu = input("""
+            print(colored("************MAIN MENU**************", "white", attrs=['blink']))
+            inpu = input(colored("""
                 1:\tExecute commands
                 2:\tExecute Algorithm
-                >>""")
+                >>""", 'white'))
             if inpu == "1":
-                pp.pprint("Type ? or help to list commands")
+                print(colored("Type ? or help to list commands", 'yellow', attrs=['dark']))
                 while 1:
                     pwd = do_pwd()
-                    inp = input(str(pwd) + "> ").strip()
-                    execute(inp)
+                    inp = input(colored(str(pwd), 'cyan', 'on_grey') + "> ").strip()
+                    if inp != "":
+                        execute(inp)
 
             elif inpu == "2":
-                ordononceur.main2()
+                ordononceur.main2(content)
 
 
     def execute(inp):
@@ -66,9 +65,12 @@ if __name__ == '__main__':
         Call shell and print it possible
         :param inp: User input
         """
-        sh = shell(inp)
-        if sh and type(sh) != dict:
-            print(sh)
+        try:
+            sh = shell(inp)
+            if sh and type(sh) != dict:
+                print(colored(sh, 'white'))
+        except:
+            print(colored('An error occurred', 'red'), colored(inp, 'green'))
 
 
     def shell(inp2, ret=None):
@@ -76,15 +78,16 @@ if __name__ == '__main__':
 
         :param inp2: command
         :param ret: Used to store redirected output and determine if the is a redirection
-        :return: return output as a string so it can be used in other shell method by the ret argument to handle redirections
+        :return: return output as a string so it can be used in another shell method
+                    by the ret argument to handle redirections
         """
         global args
         if "|" in inp2:
-            ouput = None
             """
             If pipe found split input into several commands and redirect command output to the input of the other command
             call shell function again to handle all the commands separately 
             """
+            ouput = None
             for s in inp2.split("|"):
                 s.strip()
                 ouput = shell(s, ouput)
@@ -128,7 +131,8 @@ if __name__ == '__main__':
                 """
                 return list_commands[command][0](ret)
             else:
-                print("Command not found")
+                print(colored("Command not found", 'red', attrs=['bold', 'dark']),
+                      colored(command, 'yellow',  attrs=['bold', 'dark', 'underline']))
 
 
     def do_help(ret=None):
@@ -138,7 +142,7 @@ if __name__ == '__main__':
         :return: return in case of pipe usage
         """
         for key, val in list_commands.items():
-            print("{: <20} {: <20}".format(key, list_commands[key][1]))
+            print("{: <20} {: <20}".format(colored(key, 'yellow'), colored(list_commands[key][1]), 'red'))
         return list_commands
 
 
@@ -149,7 +153,7 @@ if __name__ == '__main__':
         :return: return in case of pipe usage
         """
         for key, val in list_commands_alias.items():
-            print("{: <20} {: <20}".format(key, list_commands_alias[key][1]))
+            print("{: <20} {: <20}".format(colored(key, 'yellow'), list_commands_alias[key][1]))
         return list_commands_alias
 
 
@@ -228,19 +232,19 @@ if __name__ == '__main__':
         :param ret: Not used
         """
         global args
-        os.chdir(args[0])
+        ordononceur.os.chdir(args[0])
 
 
-    list_commands = {"execfile": [do_execfile, "execute file"],
-                     "aliases": [do_aliases, "show aliases"],
-                     "exit": [start, "return to main menu"],
-                     "lest": [do_ls, "list directory contents"],
-                     "cd": [do_cd, "change the working directory"],
-                     "help": [do_help, "print this menu"],
-                     "alias": [do_alias, "define or display aliases"],
-                     "?": [do_help, "print this menu"],
-                     "printwd": [do_pwd, "print name of current/working directory"],
-                     "cat2": [do_cat2, "concatenate files and print on the standard output"]}
+    list_commands = {"execfile":     [do_execfile,       "execute file"],
+                     "aliases":      [do_aliases,        "show aliases"],
+                     "exit":         [start,             "return to main menu"],
+                     "lest":         [do_ls,             "list directory contents"],
+                     "cd":           [do_cd,             "change the working directory"],
+                     "help":         [do_help,           "print this menu"],
+                     "alias":        [do_alias,          "define or display aliases"],
+                     "?":            [do_help,           "print this menu"],
+                     "printwd":      [do_pwd,            "print name of current/working directory"],
+                     "cat2":         [do_cat2,           "concatenate files and print on the standard output"]}
     time.sleep(1)
     start()
 
