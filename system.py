@@ -14,26 +14,6 @@ args = ""
 list_commands_alias = {}
 
 if __name__ == '__main__':
-    print("Reading profile...")
-    with open('profile', "r") as f:
-        lines = f.readlines()
-        print("Verifying file syntax...")
-        if lines[0][:4] != "PATH":
-            raise ValueError('PATH does not exist in profile!!.')
-        if lines[1][:4] != "HOME":
-            raise ValueError('HOME does not exist in profile!!.')
-        path = lines[0][5:]
-        home = lines[1][5:]
-    ruler = '='
-    home = home.strip()
-    pwd1 = Popen(['bin/printwd'], stdout=PIPE, stdin=PIPE, stderr=PIPE, encoding="utf-8").communicate()[0]
-    print("Getting current directory...")
-    print("Changing directory to ", home)
-    ordononceur.os.chdir(home)
-    pwd1 = pwd1.strip() + "/bin/"
-    path = (pwd1.split()[0] + "/bin:" + path)
-
-
     def start(ret=None):
         """
         Main menu
@@ -91,7 +71,7 @@ if __name__ == '__main__':
             for s in inp2.split("|"):
                 s.strip()
                 ouput = shell(s, ouput)
-            if ouput:
+            if ouput and type(ouput) != dict:
                 print(ouput)
         else:
             """
@@ -153,7 +133,7 @@ if __name__ == '__main__':
         :return: return in case of pipe usage
         """
         for key, val in list_commands_alias.items():
-            print("{: <20} {: <20}".format(colored(key, 'yellow'), list_commands_alias[key][1]))
+            print("{: <20} {: <20}".format(colored(key, 'yellow'), colored(list_commands_alias[key][1]), 'red'))
         return list_commands_alias
 
 
@@ -167,6 +147,18 @@ if __name__ == '__main__':
         list_commands_alias[ali[0]] = [' '.join(args[:]).split("=")[1].split("\"")[1],
                                        ' '.join(args[:]).split("=")[1].split("\"")[1]]
 
+    
+
+    def do_echo(ret=None):
+        """
+        Print argument or redirected output
+        :param ret: used in case there is a redirected input to the command
+        :return:
+        """
+        try:
+            return args[0] if args[0] else ret
+        except:
+            return ret if ret else args[0]
 
     def do_execfile(ret=None):
         """
@@ -203,7 +195,7 @@ if __name__ == '__main__':
             """
             If there is an argument the command will execute with the said argument
             """
-            return Popen([pwd1 + 'cat2'] + args, stdout=PIPE, encoding="utf-8").communicate(
+            return Popen([pwd1 + 'cat'] + args, stdout=PIPE, encoding="utf-8").communicate(
                 input=str.encode(ret) if ret else None)[0]
         else:
             try:
@@ -211,9 +203,9 @@ if __name__ == '__main__':
                 Try to use a file as input (ret in stdin) 
                 If failed the input (ret: string) will be handled by the communicate() method
                 """
-                return Popen([pwd1 + 'cat2'], stdout=PIPE, stdin=ret, encoding="utf-8").communicate()[0]
+                return Popen([pwd1 + 'cat'], stdout=PIPE, stdin=ret, encoding="utf-8").communicate()[0]
             except:
-                return Popen([pwd1 + 'cat2'], stdout=PIPE, encoding="utf-8").communicate(
+                return Popen([pwd1 + 'cat'], stdout=PIPE, encoding="utf-8").communicate(
                     input=str.encode(ret) if ret else None)[0]
 
 
@@ -222,8 +214,29 @@ if __name__ == '__main__':
         :param ret: used in case there is a redirected input to the command
         :return: return in case the output is used in another command (PIPE or redirections)
         """
-        return Popen([pwd1 + 'printwd'], stdout=PIPE, encoding="utf-8").communicate(
-            input=str.encode(ret) if ret else None)[0]
+        return Popen([pwd1 + 'printwd'], stdout=PIPE, encoding="utf-8").communicate()[0]
+
+
+    def do_touch(ret=None):
+        """
+        change file timestamps
+        :param ret:
+        :return:
+        """
+        if args:
+            """
+            If there is an argument the command will execute with the said argument
+            """
+            return Popen([pwd1 + 'touch'] + args, stdout=PIPE, encoding="utf-8").communicate(
+                input=str.encode(ret) if ret else None)[0]
+        else:
+            try:
+                """
+                If pipe use the previous command as argument
+                """
+                return Popen([pwd1 + 'touch'] + [ret.strip()], stdout=PIPE, encoding="utf-8").communicate()[0]
+            except:
+                print(colored("""Usage: touch2 file_to_create,\tor command | touch2""", 'green'))
 
 
     def do_cd(ret=None):
@@ -231,12 +244,17 @@ if __name__ == '__main__':
         Will change directory just like the function in C programming language
         :param ret: Not used
         """
-        global args
-        ordononceur.os.chdir(args[0])
+        try:
+            global args
+            ordononceur.os.chdir(args[0])
+        except:
+            ordononceur.os.chdir(ret)
+
 
 
     list_commands = {"execfile":     [do_execfile,       "execute file"],
                      "aliases":      [do_aliases,        "show aliases"],
+                     "touch2":       [do_touch,          "change file timestamps. create file if does not exist"],
                      "exit":         [start,             "return to main menu"],
                      "lest":         [do_ls,             "list directory contents"],
                      "cd":           [do_cd,             "change the working directory"],
@@ -244,7 +262,27 @@ if __name__ == '__main__':
                      "alias":        [do_alias,          "define or display aliases"],
                      "?":            [do_help,           "print this menu"],
                      "printwd":      [do_pwd,            "print name of current/working directory"],
-                     "cat2":         [do_cat2,           "concatenate files and print on the standard output"]}
+                     "cat2":         [do_cat2,           "print files on the standard output"],
+                     "echo":         [do_echo,           "display line of text/string"]}
+    print("Reading profile...")
+    with open('profile', "r") as f:
+        lines = f.readlines()
+        print("Verifying file syntax...")
+        if lines[0][:4] != "PATH":
+            raise ValueError('PATH does not exist in profile!!.')
+        if lines[1][:4] != "HOME":
+            raise ValueError('HOME does not exist in profile!!.')
+        path = lines[0][5:]
+        home = lines[1][5:]
+    ruler = '='
+    home = home.strip()
+    pwd1 = Popen(['bin/printwd'], stdout=PIPE, stdin=PIPE, stderr=PIPE, encoding="utf-8").communicate()[0]
+    print("Getting current directory...")
+    print("Changing directory to ", home)
+    do_cd(home)
+    pwd1 = pwd1.strip() + "/bin/"
+    path = (pwd1.split()[0] + "/bin:" + path)
+
     time.sleep(1)
     start()
 
